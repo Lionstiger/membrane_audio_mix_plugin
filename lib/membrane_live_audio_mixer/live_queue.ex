@@ -10,6 +10,7 @@ defmodule Membrane.LiveAudioMixer.LiveQueue do
   Every gap caused by late or dropped packets are filled with silence.
   If there is a need for more audio than there is in a queue, the missing part will also be filled with silence.
   """
+  require Membrane.Logger
   alias Membrane.RawAudio
 
   defmodule Queue do
@@ -55,21 +56,26 @@ defmodule Membrane.LiveAudioMixer.LiveQueue do
   """
   @spec remove_queue(t(), any()) :: t()
   def remove_queue(lq, id) do
-    if not Map.has_key?(lq.queues, id),
-      do: raise("Queue with id: '#{inspect(id)}' doesn't exists")
+    if Map.has_key?(lq.queues, id) do
+      # if not Map.has_key?(lq.queues, id),
+      # do: raise("Queue with id: '#{inspect(id)}' doesn't exists")
 
-    queue = lq.queues[id]
+      queue = lq.queues[id]
 
-    cond do
-      queue.draining? ->
-        raise "Queue with id: '#{inspect(id)}' is already marked as draining"
+      cond do
+        queue.draining? ->
+          raise "Queue with id: '#{inspect(id)}' is already marked as draining"
 
-      queue.buffer_duration == 0 ->
-        {_queue, lq} = pop_in(lq, [:queues, id])
-        lq
+        queue.buffer_duration == 0 ->
+          {_queue, lq} = pop_in(lq, [:queues, id])
+          lq
 
-      true ->
-        update_in(lq, [:queues, id], &Map.put(&1, :draining?, true))
+        true ->
+          update_in(lq, [:queues, id], &Map.put(&1, :draining?, true))
+      end
+    else
+      Membrane.Logger.warning("Removing unused Queue #{inspect(id)}")
+      lq
     end
   end
 
