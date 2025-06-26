@@ -92,6 +92,11 @@ defmodule Membrane.LiveAudioMixer do
         spec: Time.non_neg(),
         default: 0,
         description: "Offset of the input audio at the pad."
+      ],
+      live?: [
+        spec: boolean(),
+        default: false,
+        description: "If the input pad should be inserted at the current mixing position."
       ]
     ]
 
@@ -182,7 +187,19 @@ defmodule Membrane.LiveAudioMixer do
         context,
         %{live_queue: live_queue, started?: started?} = state
       ) do
-    offset = context.pads[pad].options.offset
+    if context.pads[pad].options.offset > 0 and context.pads[pad].options.live? do
+      Membrane.Logger.warning("""
+      Setting a non-zero offset with live streamed audio leads to stuttering.
+      """)
+    end
+
+    offset =
+      if context.pads[pad].options.live? do
+        context.pads[pad].options.offset + live_queue.current_time
+      else
+        context.pads[pad].options.offset
+      end
+
     new_live_queue = LiveQueue.add_queue(live_queue, pad_id, offset)
 
     {actions, started?} =
