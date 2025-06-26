@@ -16,6 +16,13 @@ defmodule Membrane.LiveAudioMixer do
     Audio that will come before the notification will be buffered.
 
   Input pads can have offset - it tells how much timestamps differ from mixer time.
+  Additionally they can include the live? flag, which adjusts the offset to the current mixer time.
+
+  ```elixir
+  get_child(:a_new_input)
+  |> via_in(:input, options: [offset: 0, live?: false])
+  |> child(:livemixer, Membrane.LiveAudioMixer)
+  ```
   """
 
   use Membrane.Filter
