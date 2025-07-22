@@ -55,21 +55,22 @@ defmodule Membrane.LiveAudioMixer.LiveQueue do
   """
   @spec remove_queue(t(), any()) :: t()
   def remove_queue(lq, id) do
-    if not Map.has_key?(lq.queues, id),
-      do: raise("Queue with id: '#{inspect(id)}' doesn't exists")
+    if Map.has_key?(lq.queues, id) do
+      queue = lq.queues[id]
 
-    queue = lq.queues[id]
+      cond do
+        queue.draining? ->
+          raise "Queue with id: '#{inspect(id)}' is already marked as draining"
 
-    cond do
-      queue.draining? ->
-        raise "Queue with id: '#{inspect(id)}' is already marked as draining"
+        queue.buffer_duration == 0 ->
+          {_queue, lq} = pop_in(lq, [:queues, id])
+          lq
 
-      queue.buffer_duration == 0 ->
-        {_queue, lq} = pop_in(lq, [:queues, id])
-        lq
-
-      true ->
-        update_in(lq, [:queues, id], &Map.put(&1, :draining?, true))
+        true ->
+          update_in(lq, [:queues, id], &Map.put(&1, :draining?, true))
+      end
+    else
+      lq
     end
   end
 
